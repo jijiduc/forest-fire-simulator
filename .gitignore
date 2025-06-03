@@ -1,0 +1,108 @@
+# Scala/SBT
+target/
+project/target/
+project/project/
+dist/
+.cache
+.cache-main
+.cache-tests
+.history
+.lib/
+*.class
+*.log
+
+# SBT specific
+.bsp/
+.bloop/
+.scala_dependencies
+.worksheet
+.scala-build/
+
+# IDE specific
+.metals/
+.vscode/
+.idea/
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+bin/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Linux
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+
+# Logs
+logs/
+*.log
+
+# Documentation build
+docs/_build/
+docs/.jekyll-cache/
+
+# Coverage reports
+coverage/
+*.coverage
+.coverage
+htmlcov/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Test outputs
+test-results/
+test-reports/
+
+# Simulation outputs (if any)
+output/
+results/
+simulations/
+
+# Package files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Project specific
+.claude
+*.pdf
+CLAUDE.md
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/*
+!.idea/runConfigurations/
