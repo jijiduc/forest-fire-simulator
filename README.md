@@ -39,6 +39,18 @@ The project is under the guidance of:
   - Fuel depletion model
   - Extinction probability calculation
 
+#### Simulation Engine (Phase 1.2 Complete)
+- **IOSimulationEngine**: Pure functional simulation engine using cats-effect IO
+- **SimulationState**: Immutable state with integrated metrics
+- **UpdateStrategies**: Synchronous, asynchronous, and block synchronous cell updates
+- **BoundaryHandler**: Periodic, reflective, absorbing, and fixed boundary conditions
+- **MetricsCollector**: Fire metrics and percolation analysis:
+  - Cluster detection algorithms
+  - Percolation indicator (0-1 scale)
+  - Fire size distribution analysis
+  - System-spanning fire detection
+- **SimulationConfig**: Adaptive time stepping with CFL condition
+
 #### Grid Initialization
 - **GridInitializer**: Creates initial grid state based on terrain and climate conditions
 
@@ -85,4 +97,7 @@ The test results will show in your terminal with green checkmarks for passed tes
 
 ## Author
 - [Jeremy Duc](https://github.com/jijiduc)
+
+## LLM Contribution
+- Part of this program have been implemented with the help of Claude Opus 4 from Anthropic.
 
