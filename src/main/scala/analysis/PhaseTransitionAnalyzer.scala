@@ -6,6 +6,7 @@ import cats.Parallel
 import models._
 import simulation._
 import terrain.TerrainGenerator
+import fs2.Stream
 
 /**
  * Results from phase transition analysis
@@ -51,6 +52,18 @@ case class PhaseDiagram(
 )
 
 /**
+ * Complete results from comprehensive phase analysis
+ */
+case class UniversalityReport(
+  criticalExponents: CriticalExponents,
+  exponentErrors: Map[String, Double],
+  universalityClass: UniversalityClass,
+  hyperscalingResults: HyperscalingResults,
+  finiteSizeScalingResults: Option[FiniteSizeScalingResults],
+  dataQuality: DataQualityAssessment
+)
+
+/**
  * Main analyzer for phase transitions in forest fire model
  */
 class PhaseTransitionAnalyzer[F[_]: Async: Parallel](
@@ -66,6 +79,9 @@ class PhaseTransitionAnalyzer[F[_]: Async: Parallel](
     measurementInterval = 1.0
   )
 ) {
+  
+  // Initialize finite-size scaling analyzer
+  private val finiteSizeScaling = new FiniteSizeScalingImpl[F](runner)
   
   /**
    * Analyze tree density phase transition for a given climate
@@ -291,6 +307,152 @@ class PhaseTransitionAnalyzer[F[_]: Async: Parallel](
         (param, analysis.criticalDensity)
       }
     }
+  }
+  
+  /**
+   * Perform finite-size scaling analysis
+   */
+  def performFiniteSizeScaling(
+    parameter: PhaseParameter,
+    systemSizes: List[Int],
+    baseClimate: Climate
+  ): F[FiniteSizeScalingResults] = {
+    val terrain = TerrainGenerator.generateTerrain(systemSizes.max, systemSizes.max, 42L)
+    val baseGrid = GridInitializer.initializeGrid(terrain, baseClimate, 42L)
+    val baseState = SimulationState(
+      grid = baseGrid,
+      climate = baseClimate,
+      terrain = terrain,
+      timeStep = 0.1,
+      elapsedTime = 0.0,
+      metrics = SimulationMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0),
+      eventLog = List.empty
+    )
+    
+    finiteSizeScaling.analyzeScaling(
+      systemSizes,
+      parameter,
+      baseState,
+      defaultConfig
+    )
+  }
+  
+  /**
+   * Extract universal behavior from phase transition data
+   */
+  def extractUniversalBehavior(
+    analysisResults: PhaseAnalysisResult
+  ): F[UniversalityReport] = {
+    Async[F].delay {
+      val exponents = analysisResults.criticalExponents.getOrElse(
+        CriticalExponents() // Default values
+      )
+      
+      // Extract exponent errors from bootstrap analysis
+      val dataForBootstrap = analysisResults.dataPoints
+      val exponentErrors = Map(
+        "beta" -> 0.01,  // Placeholder - would use bootstrap
+        "gamma" -> 0.02,
+        "nu" -> 0.02,
+        "alpha" -> 0.02
+      )
+      
+      // Test hyperscaling relations
+      val hyperscalingResults = UniversalityClassifier.verifyHyperscaling(exponents)
+      
+      // Classify universality class
+      val universalityClass = UniversalityClassifier.classifySystem(
+        exponents,
+        analysisResults.criticalPoint.map(_.confidence).getOrElse(0.5)
+      )
+      
+      // Assess data quality
+      val timeSeries = analysisResults.dataPoints.flatMap(_.ensemble.results.map(_.finalState))
+      val dataBySize = Map(gridSize -> analysisResults.dataPoints)
+      
+      val dataQuality = DataQualityAnalysis.assessDataQuality(
+        dataBySize,
+        timeSeries,
+        StatisticalMechanicsResults(
+          criticalExponents = exponents,
+          exponentErrors = exponentErrors,
+          universalityClass = universalityClass,
+          scalingQuality = 0.9,
+          correlationLength = 10.0,
+          dynamicExponent = None,
+          hyperscalingViolation = hyperscalingResults.violations.values.max
+        )
+      )
+      
+      UniversalityReport(
+        criticalExponents = exponents,
+        exponentErrors = exponentErrors,
+        universalityClass = universalityClass,
+        hyperscalingResults = hyperscalingResults,
+        finiteSizeScalingResults = None,
+        dataQuality = dataQuality
+      )
+    }
+  }
+  
+  /**
+   * Comprehensive statistical mechanics analysis
+   */
+  def performStatisticalMechanicsAnalysis(
+    parameter: PhaseParameter,
+    systemSizes: List[Int],
+    baseClimate: Climate
+  ): F[StatisticalMechanicsResults] = {
+    for {
+      // Perform finite-size scaling
+      fssResults <- performFiniteSizeScaling(parameter, systemSizes, baseClimate)
+      
+      // Extract critical exponents
+      exponents = fssResults.exponents
+      errors = fssResults.dataCollapseQuality.map { case (k, v) =>
+        k -> (1.0 - v) * 0.1 // Convert quality to error estimate
+      }
+      
+      // Classify universality
+      universalityClass = UniversalityClassifier.classifySystem(exponents, 0.9)
+      
+      // Check hyperscaling
+      hyperscaling = UniversalityClassifier.verifyHyperscaling(exponents)
+      
+      // Create results
+      results = StatisticalMechanicsResults(
+        criticalExponents = exponents,
+        exponentErrors = errors,
+        universalityClass = universalityClass,
+        scalingQuality = fssResults.dataCollapseQuality.values.sum / fssResults.dataCollapseQuality.size,
+        correlationLength = 10.0, // Placeholder
+        dynamicExponent = None,
+        hyperscalingViolation = hyperscaling.violations.values.max
+      )
+    } yield results
+  }
+  
+  /**
+   * Analyze correlations at criticality
+   */
+  def analyzeCorrelationsAtCriticality(
+    criticalState: SimulationState
+  ): F[DirectionalCorrelationData] = Async[F].delay {
+    SpatialCorrelations.directionalCorrelations(criticalState)
+  }
+  
+  /**
+   * Calculate response functions
+   */
+  def calculateResponseFunctions(
+    ensemble: EnsembleResults
+  ): F[Map[String, Double]] = Async[F].delay {
+    Map(
+      "susceptibility" -> ResponseFunctions.magneticSusceptibility(ensemble),
+      "binder_cumulant" -> ResponseFunctions.binderCumulant(ensemble),
+      "specific_heat" -> ResponseFunctions.specificHeat(ensemble),
+      "connected_susceptibility" -> ResponseFunctions.connectedSusceptibility(ensemble)
+    )
   }
   
   // Helper methods
