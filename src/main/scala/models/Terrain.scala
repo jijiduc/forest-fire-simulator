@@ -36,11 +36,11 @@ case class Terrain(elevationMap: Vector[Vector[Double]], width: Int, height: Int
   def vegetationTypeAt(x: Int, y: Int): VegetationType = {
     val elevation = elevationAt(x, y)
     elevation match {
-      case e if e < 800 => MixedForest
-      case e if e < 1500 => ConiferousForest
-      case e if e < 2200 => ConiferousForest
-      case e if e < 2400 => AlpineMeadow
-      case _ => NoVegetation
+      case e if e < 800 => VegetationType.DenseForest
+      case e if e < 1500 => VegetationType.SparseForest
+      case e if e < 2200 => VegetationType.SparseForest
+      case e if e < 2400 => VegetationType.Grassland
+      case _ => VegetationType.Barren
     }
   }
 }

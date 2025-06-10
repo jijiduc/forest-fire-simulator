@@ -103,6 +103,8 @@ CLAUDE.md
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# IntelliJ IDEA
-.idea/*
-!.idea/runConfigurations/
+# other files
+report.tex
+plan.md
+
+helper/*

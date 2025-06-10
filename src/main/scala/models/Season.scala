@@ -34,3 +34,10 @@ case object Winter extends Season {
   val precipitationProbability = 0.4
   val snowLineElevation = 800.0
 }
+
+object Season {
+  val Spring = models.Spring
+  val Summer = models.Summer
+  val Fall = models.Fall
+  val Winter = models.Winter
+}

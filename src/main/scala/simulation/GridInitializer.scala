@@ -40,9 +40,13 @@ object GridInitializer {
       Empty
     } else {
       vegetationType match {
-        case NoVegetation => Empty
-        case AlpineMeadow => if (random.nextDouble() < 0.3) Tree else Empty
-        case _ => if (random.nextDouble() < 0.8) Tree else Empty
+        case VegetationType.Barren => Empty
+        case VegetationType.Water => Empty
+        case VegetationType.Urban => Empty
+        case VegetationType.Grassland => if (random.nextDouble() < 0.3) Tree else Empty
+        case VegetationType.Shrubland => if (random.nextDouble() < 0.5) Tree else Empty
+        case VegetationType.SparseForest => if (random.nextDouble() < 0.7) Tree else Empty
+        case VegetationType.DenseForest => if (random.nextDouble() < 0.9) Tree else Empty
       }
     }
   }

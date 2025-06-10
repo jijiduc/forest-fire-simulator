@@ -10,7 +10,7 @@ class GridInitializerSpec extends AnyFlatSpec with Matchers {
   def createTestSetup(): (Terrain, Climate) = {
     val terrain = TerrainGenerator.generateTerrain(50, 50, 12345L)
     val climate = Climate(
-      season = Summer,
+      season = Season.Summer,
       wind = Wind(0, 5),
       humidity = 0.5,
       precipitation = 0.0
@@ -103,8 +103,8 @@ class GridInitializerSpec extends AnyFlatSpec with Matchers {
     val (terrain, climate) = createTestSetup()
     val grid = GridInitializer.initializeGrid(terrain, climate)
     
-    val forestCells = grid.cellsWithPosition.filter(_._3.vegetationType == ConiferousForest)
-    val meadowCells = grid.cellsWithPosition.filter(_._3.vegetationType == AlpineMeadow)
+    val forestCells = grid.cellsWithPosition.filter(_._3.vegetationType == VegetationType.SparseForest)
+    val meadowCells = grid.cellsWithPosition.filter(_._3.vegetationType == VegetationType.Grassland)
     
     if (forestCells.nonEmpty && meadowCells.nonEmpty) {
       val forestTreeRatio = forestCells.count(_._3.state == Tree).toDouble / forestCells.length

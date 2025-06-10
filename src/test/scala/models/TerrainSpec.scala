@@ -44,10 +44,10 @@ class TerrainSpec extends AnyFlatSpec with Matchers {
     )
     val variedTerrain = Terrain(elevationMap, 3, 3)
     
-    variedTerrain.vegetationTypeAt(0, 0) shouldBe MixedForest // < 800m
-    variedTerrain.vegetationTypeAt(1, 0) shouldBe ConiferousForest // 800-2200m
-    variedTerrain.vegetationTypeAt(1, 1) shouldBe AlpineMeadow // 2200-2400m
-    variedTerrain.vegetationTypeAt(2, 1) shouldBe NoVegetation // > 2400m
+    variedTerrain.vegetationTypeAt(0, 0) shouldBe VegetationType.DenseForest // < 800m
+    variedTerrain.vegetationTypeAt(1, 0) shouldBe VegetationType.SparseForest // 800-2200m
+    variedTerrain.vegetationTypeAt(1, 1) shouldBe VegetationType.Grassland // 2200-2400m
+    variedTerrain.vegetationTypeAt(2, 1) shouldBe VegetationType.Barren // > 2400m
   }
   
   it should "correctly calculate aspect" in {

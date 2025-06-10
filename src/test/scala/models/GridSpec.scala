@@ -11,7 +11,7 @@ class GridSpec extends AnyFlatSpec with Matchers {
         position = Position(x, y),
         state = if ((x + y) % 2 == 0) Tree else Empty,
         elevation = 1000.0,
-        vegetationType = ConiferousForest,
+        vegetationType = VegetationType.SparseForest,
         moisture = 0.5,
         temperature = 20.0
       )
