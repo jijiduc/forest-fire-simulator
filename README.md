@@ -51,6 +51,16 @@ The project is under the guidance of:
   - System-spanning fire detection
 - **SimulationConfig**: Adaptive time stepping with CFL condition
 
+#### Rule System (Phase 1.3 Complete)
+- **Modular Rule Architecture**: Extensible system for cell state transitions
+- **Rule Categories**:
+  - **IgnitionRules**: SparkIgnition, NeighborIgnition, EmberIgnition
+  - **BurningRules**: IntensityEvolution, FuelConsumption, HeatGeneration, PreHeating
+  - **ExtinctionRules**: FuelDepletion, MoistureSuppression, TemperatureDecay, NeighborIsolation
+  - **RecoveryRules**: NaturalRegrowth, SeasonalGrowth, SeedDispersion, VegetationSuccession
+- **RuleEngine**: Orchestrates rule application based on cell states
+- **RuleConfig**: Enable/disable specific rules and set parameters
+
 #### Grid Initialization
 - **GridInitializer**: Creates initial grid state based on terrain and climate conditions
 

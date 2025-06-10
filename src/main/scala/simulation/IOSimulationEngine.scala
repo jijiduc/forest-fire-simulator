@@ -1,18 +1,21 @@
 package simulation
 
 import cats.effect._
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import fs2.Stream
 import scala.concurrent.duration._
 import scala.util.Random
 import models._
+import simulation.rules._
 
 /**
  * IO-based implementation of the simulation engine
  * Provides pure functional simulation with controlled side effects
  */
 class IOSimulationEngine(
-  timeStepCalculator: TimeStepCalculator = AdaptiveTimeStep
+  timeStepCalculator: TimeStepCalculator = AdaptiveTimeStep,
+  ruleEngine: Option[RuleEngine[IO]] = None
 ) extends SimulationEngine[IO] {
   
   /**
@@ -127,10 +130,19 @@ class IOSimulationEngine(
     
     // Update all cells (parallel collection not available in Scala 3)
     val updates = cellUpdates.map { case (cell, neighbors) =>
-      CellUpdateLogic.updateCell(
-        cell, neighbors, state.climate, state.terrain, dt,
-        FireDynamics.FireDynamicsParameters(), random
-      )
+      ruleEngine match {
+        case Some(engine) =>
+          // Use rule engine for updates
+          val updatedCell = engine.applyRules(cell, neighbors, state).unsafeRunSync()
+          val events = detectEvents(cell, updatedCell)
+          (updatedCell, events)
+        case None =>
+          // Fall back to original logic
+          CellUpdateLogic.updateCell(
+            cell, neighbors, state.climate, state.terrain, dt,
+            FireDynamics.FireDynamicsParameters(), random
+          )
+      }
     }
     
     // Reconstruct grid and collect events
@@ -171,10 +183,17 @@ class IOSimulationEngine(
         currentGrid, x, y, config.boundaryCondition
       )
       
-      val (updatedCell, cellEvents) = CellUpdateLogic.updateCell(
-        cell, neighbors, state.climate, state.terrain, dt,
-        FireDynamics.FireDynamicsParameters(), random
-      )
+      val (updatedCell, cellEvents) = ruleEngine match {
+        case Some(engine) =>
+          val updated = engine.applyRules(cell, neighbors, state).unsafeRunSync()
+          val events = detectEvents(cell, updated)
+          (updated, events)
+        case None =>
+          CellUpdateLogic.updateCell(
+            cell, neighbors, state.climate, state.terrain, dt,
+            FireDynamics.FireDynamicsParameters(), random
+          )
+      }
       
       currentGrid = currentGrid.updated(x, y, updatedCell)
       events ++= cellEvents
@@ -196,6 +215,18 @@ class IOSimulationEngine(
     // Full block update would require more complex synchronization
     synchronousUpdate(state, dt, config)
   }
+  
+  /**
+   * Detect fire events based on state transitions
+   */
+  private def detectEvents(oldCell: Cell, newCell: Cell): List[FireEvent] = {
+    (oldCell.state, newCell.state) match {
+      case (Tree, Burning) => List(IgnitionEvent(0.0, newCell.position))
+      case (Burning, Tree) => List(ExtinctionEvent(0.0, newCell.position))
+      case (Burning, Burnt) => List(BurnoutEvent(0.0, newCell.position))
+      case _ => List.empty
+    }
+  }
 }
 
 /**
@@ -206,4 +237,13 @@ object IOSimulationEngine {
   
   def withTimeStepCalculator(calculator: TimeStepCalculator): IOSimulationEngine = 
     new IOSimulationEngine(calculator)
+    
+  def withRuleEngine(ruleEngine: RuleEngine[IO]): IOSimulationEngine =
+    new IOSimulationEngine(AdaptiveTimeStep, Some(ruleEngine))
+    
+  def withRuleEngineAndTimeStep(
+    ruleEngine: RuleEngine[IO], 
+    calculator: TimeStepCalculator
+  ): IOSimulationEngine =
+    new IOSimulationEngine(calculator, Some(ruleEngine))
 }
