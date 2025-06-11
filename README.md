@@ -136,6 +136,28 @@ The project is under the guidance of:
   - CSV format for time series and phase data
   - Grid snapshots
   - Climate scenario parameters
+  - JSON format with delta compression for web viewer
+
+#### Visualization Pipeline (Phase 4 Complete)
+- **Python Visualization Scripts** (`visualization/python/`):
+  - Phase diagrams with contour lines and uncertainty bands
+  - Time series analysis with trends and seasonal decomposition
+  - Spatial pattern analysis and cluster distributions
+  - Climate scenario comparisons (RCP 2.6/4.5/8.5)
+  - 3D terrain visualization with Plotly
+- **Video Generation** (`visualization/video/`):
+  - Automated 1080p60 demo video creation
+  - 3D terrain animation support
+  - Camera path controls
+  - Split-screen capabilities
+- **Interactive Web Viewer** (`visualization/web/`):
+  - Single-page application with real-time visualization
+  - 2D canvas-based grid rendering with pan/zoom
+  - 3D Three.js terrain visualization
+  - Playback controls (play/pause, speed control, timeline scrubber)
+  - Real-time metrics display
+  - JSON data import with delta compression
+  - Export frames as PNG images
 
 #### Grid Initialization
 - **GridInitializer**: Creates initial grid state based on terrain and climate conditions
@@ -172,6 +194,34 @@ sbt "runMain demos.WallisSimulation"
 # Run phase transition analysis
 sbt "runMain analysis.PhaseTransitionDemo"
 ```
+
+### Web Viewer
+
+1. **Generate simulation data:**
+```bash
+# Generate demo data with fire spread
+sbt "runMain GenerateWebViewerDataSimple"
+```
+
+2. **Start web server:**
+```bash
+cd visualization/web
+python3 -m http.server 8080
+```
+
+3. **Open viewer:**
+   - Navigate to `http://localhost:8080`
+   - Click "Load Simulation"
+   - Select `data/fire_simulation.json`
+   - Use playback controls to visualize fire spread
+
+**Web Viewer Features:**
+- 2D grid view with zoom/pan controls
+- 3D terrain visualization (toggle with buttons)
+- Real-time metrics display
+- Timeline scrubber and speed control
+- Export frames as PNG images
+- Keyboard shortcuts (Space=play/pause, arrows=step)
 
 ## Configuration
 

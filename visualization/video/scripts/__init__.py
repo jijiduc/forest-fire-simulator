@@ -1,0 +1,1 @@
+# Video generation scripts for forest fire simulator

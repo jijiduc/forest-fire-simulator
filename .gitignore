@@ -115,3 +115,35 @@ report.synctex.gz
 plan.md
 FirePyramids.jpg
 helper/*
+
+# Python virtual environment
+visualization/venv/
+visualization/python/__pycache__/
+visualization/python/**/__pycache__/
+*.pyc
+
+# Web viewer generated data (keep sample files, ignore large generated ones)
+visualization/web/data/*.json
+visualization/web/data/*.csv
+!visualization/web/data/sample_*.json
+!visualization/web/data/sample_*.csv
+
+# Video generation outputs
+visualization/video/frames/
+visualization/video/segments/
+visualization/video/output/
+visualization/video/*.mp4
+visualization/video/*.avi
+
+# Visualization outputs
+visualization/figures/*.png
+visualization/figures/*.pdf
+visualization/figures/*.svg
+visualization/*.png
+visualization/*.html
+
+# Keep directory structure
+!visualization/web/data/.gitkeep
+!visualization/video/frames/.gitkeep
+!visualization/video/segments/.gitkeep
+!visualization/video/output/.gitkeep
