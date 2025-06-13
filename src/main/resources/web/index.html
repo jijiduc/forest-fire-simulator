@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Fire Simulation Viewer</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header>
+            <h1>Forest Fire Simulation Viewer</h1>
+            <div class="file-controls">
+                <input type="file" id="fileInput" accept=".json">
+                <label for="fileInput" class="file-label">Load Simulation</label>
+                <span id="fileName">No file loaded</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <!-- Left Panel - Controls and Metrics -->
+            <aside class="left-panel">
+                <!-- Playback Controls -->
+                <section class="controls-section">
+                    <h2>Playback Controls</h2>
+                    <div class="playback-controls">
+                        <button id="playPauseBtn" class="control-btn" disabled>▶ Play</button>
+                        <button id="stepBackBtn" class="control-btn" disabled>◀◀</button>
+                        <button id="stepForwardBtn" class="control-btn" disabled>▶▶</button>
+                        <button id="resetBtn" class="control-btn" disabled>↺ Reset</button>
+                    </div>
+                    <div class="speed-control">
+                        <label for="speedSlider">Speed: <span id="speedValue">1x</span></label>
+                        <input type="range" id="speedSlider" min="0.5" max="10" step="0.5" value="1">
+                    </div>
+                    <div class="timeline-control">
+                        <label for="timelineSlider">Time: <span id="timeValue">0.00</span>s</label>
+                        <input type="range" id="timelineSlider" min="0" max="100" value="0" disabled>
+                        <div class="timeline-info">
+                            Frame: <span id="frameNumber">0</span> / <span id="totalFrames">0</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Metrics Display -->
+                <section class="metrics-section">
+                    <h2>Current Metrics</h2>
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <label>Active Fires</label>
+                            <span id="activeFires">-</span>
+                        </div>
+                        <div class="metric">
+                            <label>Burnt Area</label>
+                            <span id="burntArea">-</span>
+                        </div>
+                        <div class="metric">
+                            <label>Largest Cluster</label>
+                            <span id="largestCluster">-</span>
+                        </div>
+                        <div class="metric">
+                            <label>Tree Density</label>
+                            <span id="treeDensity">-</span>
+                        </div>
+                        <div class="metric">
+                            <label>Percolation</label>
+                            <span id="percolation">-</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Parameters Display -->
+                <section class="parameters-section">
+                    <h2>Simulation Parameters</h2>
+                    <div id="parametersDisplay" class="parameters-grid">
+                        <p class="no-data">Load a simulation to view parameters</p>
+                    </div>
+                </section>
+
+                <!-- View Controls -->
+                <section class="view-controls-section">
+                    <h2>View Options</h2>
+                    <div class="view-toggles">
+                        <button id="toggle2D" class="view-btn active">2D Grid</button>
+                        <button id="toggle3D" class="view-btn">3D Terrain</button>
+                    </div>
+                    <div class="data-view-modes">
+                        <h3>Data View</h3>
+                        <select id="viewModeSelect" class="view-mode-select">
+                            <option value="state" selected>Cell State</option>
+                            <option value="vegetation">Vegetation Type</option>
+                            <option value="moisture">Moisture Level</option>
+                            <option value="temperature">Temperature</option>
+                        </select>
+                    </div>
+                    <div class="view-options">
+                        <label>
+                            <input type="checkbox" id="showGrid" checked>
+                            Show Grid Lines
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showElevation">
+                            Show Elevation
+                        </label>
+                    </div>
+                    <button id="exportImageBtn" class="control-btn">📷 Export Image</button>
+                </section>
+            </aside>
+
+            <!-- Center - Visualization -->
+            <main class="visualization-container">
+                <div id="canvas2D" class="canvas-container active">
+                    <canvas id="gridCanvas"></canvas>
+                    <div class="zoom-controls">
+                        <button id="zoomInBtn">+</button>
+                        <button id="zoomOutBtn">-</button>
+                        <button id="zoomResetBtn">⟲</button>
+                    </div>
+                </div>
+                <div id="canvas3D" class="canvas-container">
+                    <div id="threejsContainer"></div>
+                </div>
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="spinner"></div>
+                    <p>Loading simulation data...</p>
+                </div>
+            </main>
+
+            <!-- Right Panel - Legend and Info -->
+            <aside class="right-panel">
+                <section class="legend-section">
+                    <h2>Legend</h2>
+                    <div id="legendContainer">
+                        <!-- Default state legend -->
+                        <div class="legend" id="stateLegend">
+                            <div class="legend-item">
+                                <span class="legend-color empty"></span>
+                                <span>Empty</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color tree"></span>
+                                <span>Tree</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color burning"></span>
+                                <span>Burning</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color burnt"></span>
+                                <span>Burnt</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Vegetation legend (hidden by default) -->
+                        <div class="legend" id="vegetationLegend" style="display: none;">
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #1b5e20;"></span>
+                                <span>Dense Forest</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #4caf50;"></span>
+                                <span>Sparse Forest</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #aed581;"></span>
+                                <span>Grassland</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #8bc34a;"></span>
+                                <span>Shrubland</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #bcaaa4;"></span>
+                                <span>Barren</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #1976d2;"></span>
+                                <span>Water</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #757575;"></span>
+                                <span>Urban</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Gradient legends for moisture and temperature -->
+                        <div class="gradient-legend" id="moistureLegend" style="display: none;">
+                            <label>Moisture Level</label>
+                            <div class="gradient-bar moisture-gradient"></div>
+                            <div class="gradient-labels">
+                                <span>Dry</span>
+                                <span>Wet</span>
+                            </div>
+                        </div>
+                        
+                        <div class="gradient-legend" id="temperatureLegend" style="display: none;">
+                            <label>Temperature</label>
+                            <div class="gradient-bar temperature-gradient"></div>
+                            <div class="gradient-labels">
+                                <span>Cold</span>
+                                <span>Hot</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="intensity-gradient">
+                        <label>Fire Intensity</label>
+                        <div class="gradient-bar"></div>
+                        <div class="gradient-labels">
+                            <span>Low</span>
+                            <span>High</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="info-section">
+                    <h2>Simulation Info</h2>
+                    <div id="simulationInfo">
+                        <p class="no-data">No simulation loaded</p>
+                    </div>
+                </section>
+
+                <section class="instructions-section">
+                    <h2>Controls</h2>
+                    <ul>
+                        <li><kbd>Space</kbd> - Play/Pause</li>
+                        <li><kbd>←</kbd> <kbd>→</kbd> - Step frames</li>
+                        <li><kbd>Mouse Drag</kbd> - Pan view</li>
+                        <li><kbd>Scroll</kbd> - Zoom</li>
+                        <li><kbd>F</kbd> - Fullscreen</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <span id="statusMessage">Ready</span>
+            <span id="performanceInfo"></span>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/viewer.js" type="module"></script>
+</body>
+</html>

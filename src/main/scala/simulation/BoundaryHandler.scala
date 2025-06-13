@@ -19,7 +19,7 @@ object BoundaryHandler {
     case PeriodicBoundary => getPeriodicNeighbors(grid, x, y)
     case ReflectiveBoundary => getReflectiveNeighbors(grid, x, y)
     case AbsorbingBoundary => getAbsorbingNeighbors(grid, x, y)
-    case FixedBoundary(conditions) => getFixedNeighbors(grid, x, y, conditions)
+    case FixedBoundary(state) => getFixedNeighbors(grid, x, y, state)
   }
   
   /**
@@ -68,7 +68,7 @@ object BoundaryHandler {
     grid: Grid, 
     x: Int, 
     y: Int, 
-    conditions: Map[Position, CellState]
+    fixedState: CellState
   ): List[Cell] = {
     val neighbors = for {
       dx <- -1 to 1
@@ -82,7 +82,6 @@ object BoundaryHandler {
       } else {
         // Create virtual cell with fixed state
         val position = Position(nx, ny)
-        val fixedState = conditions.getOrElse(position, Empty)
         Cell(
           position = position,
           state = fixedState,

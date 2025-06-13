@@ -43,6 +43,12 @@ case class SimulationMetrics(
   averageMoisture: Double
 ) {
   def fireRatio: Double = if (totalBurntArea > 0) activeFires.toDouble / totalBurntArea else 0.0
+  def fireSpreadRate: Double = averageFireIntensity * 0.1 // Simplified metric
+  def averageTemperature: Double = 20.0 + averageFireIntensity * 0.1 // Simplified
+}
+
+object SimulationMetrics {
+  def empty: SimulationMetrics = SimulationMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0)
 }
 
 /**
@@ -77,7 +83,8 @@ case class SimulationConfig(
   boundaryCondition: BoundaryCondition = AbsorbingBoundary,
   updateStrategy: UpdateStrategy = SynchronousUpdate,
   parallelism: Int = Runtime.getRuntime.availableProcessors(),
-  randomSeed: Option[Long] = None
+  randomSeed: Option[Long] = None,
+  saveInterval: Int = 10
 )
 
 /**
@@ -87,7 +94,7 @@ sealed trait BoundaryCondition
 case object PeriodicBoundary extends BoundaryCondition
 case object ReflectiveBoundary extends BoundaryCondition
 case object AbsorbingBoundary extends BoundaryCondition
-case class FixedBoundary(conditions: Map[Position, CellState]) extends BoundaryCondition
+case class FixedBoundary(state: CellState) extends BoundaryCondition
 
 /**
  * Update strategies for cell evolution

@@ -3,6 +3,7 @@ package io.importers
 import cats.effect._
 import cats.implicits._
 import io.swiss._
+import io.geodata._
 import models._
 import models.{Terrain, Grid}
 import simulation._
@@ -18,6 +19,7 @@ class SwissDataImporter[F[_]: Async](httpClient: Client[F]) {
   
   private val mapClient = new SwissMapClient[F](httpClient)
   private val stacClient = new STACClient[F](httpClient)
+  private val geoDataClient = new SwissGeoDataClient[F](httpClient)
   
   /**
    * Import all data for a region and create simulation components
@@ -25,29 +27,79 @@ class SwissDataImporter[F[_]: Async](httpClient: Client[F]) {
   def importRegionData(
     region: CoordinateSystems.LV95BoundingBox,
     gridResolution: Int = 50, // meters per cell
-    cacheDir: Option[Path] = None
+    cacheDir: Option[Path] = None,
+    useRealData: Boolean = false
   ): F[RegionData] = {
     
     val cache = cacheDir.getOrElse(Paths.get("cache"))
     
-    for {
-      _ <- Async[F].delay(Files.createDirectories(cache))
-      
-      // Download or load from cache
-      elevationData <- loadOrDownloadElevation(region, cache)
-      landCoverData <- loadOrDownloadLandCover(region, cache)
-      
-      // Convert to simulation grid
-      terrain <- createTerrain(elevationData, landCoverData, gridResolution)
-      vegetationMap <- createVegetationMap(landCoverData, gridResolution)
-      
-    } yield RegionData(
-      bounds = region,
-      terrain = terrain,
-      vegetationMap = vegetationMap,
-      elevationData = elevationData,
-      landCoverData = landCoverData
-    )
+    if (useRealData) {
+      // Use real geodata through GeoDataClient
+      for {
+        _ <- Async[F].delay(Files.createDirectories(cache))
+        
+        // Create proper bounding box
+        bounds = io.geodata.BoundingBox(
+          min = CoordinateSystems.LV95(region.minEast, region.minNorth),
+          max = CoordinateSystems.LV95(region.maxEast, region.maxNorth)
+        )
+        
+        // Fetch real data
+        elevationArray <- geoDataClient.fetchElevation(bounds, gridResolution)
+        vegetationArray <- geoDataClient.fetchLandCover(bounds)
+        
+        // Convert to our data structures
+        width = ((region.maxEast - region.minEast) / gridResolution).toInt
+        height = ((region.maxNorth - region.minNorth) / gridResolution).toInt
+        
+        terrain = Terrain(
+          elevationMap = elevationArray.map(_.toVector).toVector,
+          width = width,
+          height = height
+        )
+        
+        elevationData = SwissDataModels.ElevationData(
+          bounds = region,
+          resolution = gridResolution.toDouble,
+          data = elevationArray
+        )
+        
+        landCoverData = SwissDataModels.LandCoverData(
+          bounds = region,
+          resolution = gridResolution.toDouble,
+          data = vegetationArray.map(_.map(veg => 
+            LandCoverTypeExtensions.fromVegetationType(veg)
+          ))
+        )
+        
+      } yield RegionData(
+        bounds = region,
+        terrain = terrain,
+        vegetationMap = vegetationArray,
+        elevationData = elevationData,
+        landCoverData = landCoverData
+      )
+    } else {
+      // Original implementation with mock data
+      for {
+        _ <- Async[F].delay(Files.createDirectories(cache))
+        
+        // Download or load from cache
+        elevationData <- loadOrDownloadElevation(region, cache)
+        landCoverData <- loadOrDownloadLandCover(region, cache)
+        
+        // Convert to simulation grid
+        terrain <- createTerrain(elevationData, landCoverData, gridResolution)
+        vegetationMap <- createVegetationMap(landCoverData, gridResolution)
+        
+      } yield RegionData(
+        bounds = region,
+        terrain = terrain,
+        vegetationMap = vegetationMap,
+        elevationData = elevationData,
+        landCoverData = landCoverData
+      )
+    }
   }
   
   /**
@@ -75,7 +127,63 @@ class SwissDataImporter[F[_]: Async](httpClient: Client[F]) {
   }
   
   /**
-   * Create a Wallis-specific simulation setup
+   * Create a region-specific simulation setup using scenarios
+   */
+  def createRegionSimulation(
+    scenario: RegionScenario,
+    scale: ScaleFactor,
+    useRealData: Boolean = false,
+    climateScenario: String = "baseline",
+    year: Int = 2020
+  ): F[RegionSimulationSetup] = {
+    
+    val resolution = scenario.getResolution(scale)
+    val (width, height) = scenario.getGridSize(scale)
+    
+    // Convert bounds to LV95BoundingBox
+    val lv95Bounds = CoordinateSystems.LV95BoundingBox(
+      minEast = scenario.bounds.min.east,
+      maxEast = scenario.bounds.max.east,
+      minNorth = scenario.bounds.min.north,
+      maxNorth = scenario.bounds.max.north
+    )
+    
+    for {
+      regionData <- importRegionData(lv95Bounds, resolution, useRealData = useRealData)
+      
+      // Fetch climate data if using real data
+      climateData <- if (useRealData) {
+        geoDataClient.fetchClimateData(scenario.bounds, climateScenario, year)
+      } else {
+        Async[F].pure(Map(
+          "temperature" -> 15.0,
+          "humidity" -> 0.5,
+          "precipitation" -> 800.0,
+          "extreme_event_frequency" -> 1.0
+        ))
+      }
+      
+      // Create climate based on region and scenario
+      baseClimate = createClimateFromData(scenario, climateData)
+      
+      // Initialize grid
+      grid = GridInitializer.initializeGrid(regionData.terrain, baseClimate)
+      
+      // Apply vegetation from land cover
+      gridWithVegetation = applyVegetationMap(grid, regionData.vegetationMap)
+      
+    } yield RegionSimulationSetup(
+      scenario = scenario,
+      scale = scale,
+      regionData = regionData,
+      initialGrid = gridWithVegetation,
+      baseClimate = baseClimate,
+      parameters = createRegionParameters(scenario)
+    )
+  }
+  
+  /**
+   * Create a Wallis-specific simulation setup (legacy compatibility)
    */
   def createWallisSimulation(
     subregion: Option[CoordinateSystems.LV95BoundingBox] = None,
@@ -278,6 +386,50 @@ class SwissDataImporter[F[_]: Async](httpClient: Client[F]) {
     }
 }
 
+  private def createClimateFromData(scenario: RegionScenario, data: Map[String, Double]): Climate = {
+    val temp = data.getOrElse("temperature", 15.0)
+    val humidity = data.getOrElse("humidity", 0.5)
+    
+    // Apply Foehn effects if applicable
+    val (windDir, windSpeed, adjustedHumidity) = if (scenario.characteristics.foehnFrequency > 0.1) {
+      (135.0, 15.0 * 1.5, humidity * 0.7) // SE Foehn wind
+    } else {
+      (225.0, 10.0, humidity) // Default SW wind
+    }
+    
+    Climate(
+      season = Season.Summer,
+      wind = Wind(windDir, windSpeed),
+      humidity = adjustedHumidity,
+      precipitation = 0.0
+    )
+  }
+  
+  private def createRegionParameters(scenario: RegionScenario): RegionParameters = {
+    RegionParameters(
+      elevationRange = scenario.characteristics.elevationRange,
+      averageSlope = scenario.characteristics.averageSlope,
+      dominantVegetation = scenario.characteristics.dominantVegetation,
+      fireReturnInterval = scenario.characteristics.fireReturnInterval,
+      foehnFrequency = scenario.characteristics.foehnFrequency,
+      elevationWindMultiplier = 0.0005,
+      elevationTemperatureGradient = -0.0065
+    )
+  }
+
+// Extension to SwissDataModels.LandCoverType
+object LandCoverTypeExtensions {
+  def fromVegetationType(veg: VegetationType): SwissDataModels.LandCoverType = veg match {
+      case VegetationType.DenseForest => SwissDataModels.ClosedForest
+      case VegetationType.SparseForest => SwissDataModels.OpenForest
+      case VegetationType.Shrubland => SwissDataModels.BushForest
+      case VegetationType.Grassland => SwissDataModels.GrasslandAgriculture
+      case VegetationType.Water => SwissDataModels.StandingWater
+      case VegetationType.Urban => SwissDataModels.BuiltUp
+      case VegetationType.Barren => SwissDataModels.BareRock
+    }
+}
+
 /**
  * Region data container
  */
@@ -287,6 +439,31 @@ case class RegionData(
   vegetationMap: Array[Array[VegetationType]],
   elevationData: SwissDataModels.ElevationData,
   landCoverData: SwissDataModels.LandCoverData
+)
+
+/**
+ * Generic region simulation setup
+ */
+case class RegionSimulationSetup(
+  scenario: RegionScenario,
+  scale: ScaleFactor,
+  regionData: RegionData,
+  initialGrid: Grid,
+  baseClimate: Climate,
+  parameters: RegionParameters
+)
+
+/**
+ * Region-specific parameters
+ */
+case class RegionParameters(
+  elevationRange: (Double, Double),
+  averageSlope: Double,
+  dominantVegetation: String,
+  fireReturnInterval: Int,
+  foehnFrequency: Double,
+  elevationWindMultiplier: Double,
+  elevationTemperatureGradient: Double
 )
 
 /**

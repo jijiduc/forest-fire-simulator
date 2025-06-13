@@ -1,98 +1,138 @@
-import models._
-import terrain.TerrainGenerator
-import simulation._
 import cats.effect._
+import cats.effect.std.Console
 import cats.implicits._
+import com.monovore.decline._
+import com.monovore.decline.effect._
+import cli._
+import app._
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-object ForestFireSimulator extends IOApp.Simple {
+object ForestFireSimulator extends CommandIOApp(
+  name = "forest-fire-simulator",
+  header = "Forest Fire Simulator - Alpine Ecosystem Modeling",
+  version = "1.0.0"
+) {
   
-  def run: IO[Unit] = {
-    for {
-      _ <- IO.println("Forest Fire Simulator - Alpine Ecosystem")
-      _ <- IO.println("=========================================")
-      
-      width = 100
-      height = 100
-      
-      _ <- IO.println(s"Generating ${width}x${height} alpine terrain...")
-      terrain = TerrainGenerator.generateTerrain(width, height)
-      
-      climate = Climate(
-        season = Season.Summer,
-        wind = Wind(direction = math.Pi / 4, speed = 5.0),
-        humidity = 0.4,
-        precipitation = 0.0
-      )
-      
-      _ <- IO.println(s"Initializing grid for ${climate.season} season...")
-      grid = GridInitializer.initializeGrid(terrain, climate)
-      
-      // Create initial simulation state
-      initialState = SimulationState(
-        grid = grid,
-        climate = climate,
-        terrain = terrain,
-        timeStep = 0.1,
-        elapsedTime = 0.0,
-        metrics = SimulationMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0),
-        eventLog = List.empty
-      )
-      
-      // Collect initial metrics
-      metrics = MetricsCollector.collectMetrics(initialState)
-      stateWithMetrics = initialState.withMetrics(metrics)
-      
-      // Calculate statistics
-      stats = grid.cellsWithPosition.groupBy(_._3.state).map { case (state, cells) =>
-        state -> cells.length
-      }
-      
-      _ <- IO.println("\nInitial cell distribution:")
-      _ <- stats.toList.traverse { case (state, count) =>
-        IO.println(s"  $state: $count cells")
-      }
-      
-      elevationStats = grid.cellsWithPosition.groupBy { case (_, _, cell) =>
-        (cell.elevation / 500).toInt * 500
-      }.map { case (elevation, cells) =>
-        elevation -> cells.length
-      }.toSeq.sortBy(_._1)
-      
-      _ <- IO.println("\nElevation distribution:")
-      _ <- elevationStats.traverse { case (elevation, count) =>
-        IO.println(f"  ${elevation}%4d - ${elevation + 500}%4d m: $count%5d cells")
-      }
-      
-      _ <- IO.println("\nSimulation Metrics:")
-      _ <- IO.println(f"  Tree density: ${metrics.treeDensity * 100}%.1f%%")
-      _ <- IO.println(f"  Average moisture: ${metrics.averageMoisture * 100}%.1f%%")
-      _ <- IO.println(f"  Percolation indicator: ${metrics.percolationIndicator}%.3f")
-      
-      _ <- IO.println("\nPhase 1.1 (Fire Dynamics) ✓")
-      _ <- IO.println("Phase 1.2 (Simulation Engine) ✓")
-      _ <- IO.println("\nSimulation engine ready for execution!")
-      
-      // Example: Run a few simulation steps
-      _ <- IO.println("\nRunning 10 simulation steps...")
-      engine = IOSimulationEngine()
-      config = SimulationConfig(
-        maxSteps = 10,
-        adaptiveTimeStep = true,
-        boundaryCondition = AbsorbingBoundary
-      )
-      
-      finalState <- engine.run(stateWithMetrics, 10, config).compile.last
-      
-      _ <- finalState match {
-        case Some(state) =>
-          IO.println(f"\nAfter 10 steps (t=${state.elapsedTime}%.2f):")
-            *> IO.println(f"  Active fires: ${state.metrics.activeFires}")
-            *> IO.println(f"  Burnt area: ${state.metrics.totalBurntArea}")
-            *> IO.println(f"  Percolation: ${state.metrics.percolationIndicator}%.3f")
-        case None =>
-          IO.println("No simulation states generated")
-      }
-      
-    } yield ()
+  implicit def logger[F[_]: Sync]: Logger[F] = Slf4jLogger.getLogger[F]
+  
+  override def main: Opts[IO[ExitCode]] = 
+    CommandParser.commands.map { command =>
+      for {
+        // Load configuration
+        config <- ConfigLoader.load[IO]()
+        
+        // Create progress reporter
+        progressReporter <- ProgressReporter.console[IO]
+        
+        // Execute command
+        exitCode <- command match {
+          case cmd: RunCommand => 
+            new SimulationRunner[IO](config, progressReporter).run(cmd)
+            
+          case cmd: AnalyzeCommand => 
+            new AnalysisRunner[IO](config, progressReporter).run(cmd)
+            
+          case cmd: ExportCommand => 
+            new ExportRunner[IO](config, progressReporter).run(cmd)
+            
+          case cmd: DemoCommand => 
+            new DemoRunner[IO](config, progressReporter).run(cmd)
+            
+          case ConfigCommand("show") => 
+            showConfiguration(config)
+            
+          case ConfigCommand("validate") => 
+            validateConfiguration(config)
+            
+          case cmd: VisualizeCommand =>
+            new VisualizationRunner[IO](config).run(cmd)
+            
+          case _ => 
+            Console[IO].errorln("Unknown command").as(ExitCode.Error)
+        }
+        
+      } yield exitCode
+    }
+  
+  private def showConfiguration(config: AppConfig): IO[ExitCode] = for {
+    _ <- Console[IO].println("\n⚙️  Current Configuration")
+    _ <- Console[IO].println("=" * 60)
+    _ <- Console[IO].println("\nSimulation Settings:")
+    _ <- Console[IO].println(s"  Grid Size: ${config.simulation.defaultGridSize}")
+    _ <- Console[IO].println(s"  Adaptive Time Step: ${config.simulation.adaptiveTimeStep}")
+    _ <- Console[IO].println(s"  Boundary Condition: ${config.simulation.boundaryCondition}")
+    
+    _ <- Console[IO].println("\nFire Dynamics:")
+    _ <- Console[IO].println(f"  Base Ignition Probability: ${config.simulation.fireDynamics.baseIgnitionProbability}%.6f")
+    _ <- Console[IO].println(f"  Moisture Coefficient: ${config.simulation.fireDynamics.moistureCoefficient}%.2f")
+    _ <- Console[IO].println(f"  Temperature Critical: ${config.simulation.fireDynamics.temperatureCritical}%.1f°C")
+    _ <- Console[IO].println(f"  Wind Factor: ${config.simulation.fireDynamics.windFactor}%.4f")
+    _ <- Console[IO].println(f"  Slope Factor: ${config.simulation.fireDynamics.slopeFactor}%.3f")
+    
+    _ <- Console[IO].println("\nRegions:")
+    _ <- config.regions.toList.traverse { case (name, region) =>
+      Console[IO].println(s"  $name: ${region.sizeKm}km × ${region.sizeKm}km at (${region.centerLat}, ${region.centerLon})")
+    }
+    
+    _ <- Console[IO].println("\nExport Settings:")
+    _ <- Console[IO].println(s"  Formats: ${config.exportConfig.formats.mkString(", ")}")
+    _ <- Console[IO].println(s"  Compression: ${config.exportConfig.compression}")
+    
+    _ <- Console[IO].println("\nLogging:")
+    _ <- Console[IO].println(s"  Level: ${config.logging.level}")
+    _ <- Console[IO].println(s"  File: ${config.logging.file.getOrElse("Console only")}")
+  } yield ExitCode.Success
+  
+  private def validateConfiguration(config: AppConfig): IO[ExitCode] = for {
+    _ <- Console[IO].println("\n🔍 Validating Configuration")
+    _ <- Console[IO].println("=" * 60)
+    
+    errors = validateConfig(config)
+    
+    _ <- if (errors.isEmpty) {
+      Console[IO].println("\n✅ Configuration is valid!")
+    } else {
+      Console[IO].println(s"\n❌ Found ${errors.length} configuration errors:") *>
+      errors.traverse_(error => Console[IO].println(s"   - $error"))
+    }
+    
+  } yield if (errors.isEmpty) ExitCode.Success else ExitCode.Error
+  
+  private def validateConfig(config: AppConfig): List[String] = {
+    val errors = List.newBuilder[String]
+    
+    // Validate simulation settings
+    if (config.simulation.defaultGridSize < 10) 
+      errors += "Grid size must be at least 10"
+    if (config.simulation.defaultGridSize > 1000) 
+      errors += "Grid size must not exceed 1000"
+    
+    // Validate fire dynamics
+    val fd = config.simulation.fireDynamics
+    if (fd.baseIgnitionProbability < 0 || fd.baseIgnitionProbability > 1)
+      errors += "Base ignition probability must be between 0 and 1"
+    if (fd.moistureCoefficient < 0)
+      errors += "Moisture coefficient must be non-negative"
+    if (fd.temperatureCritical < -50 || fd.temperatureCritical > 60)
+      errors += "Critical temperature must be between -50°C and 60°C"
+    if (fd.windFactor < 0)
+      errors += "Wind factor must be non-negative"
+    if (fd.slopeFactor < 0)
+      errors += "Slope factor must be non-negative"
+    
+    // Validate regions
+    config.regions.foreach { case (name, region) =>
+      if (region.sizeKm < 1 || region.sizeKm > 100)
+        errors += s"Region $name: size must be between 1 and 100 km"
+      if (region.resolutionM < 10 || region.resolutionM > 1000)
+        errors += s"Region $name: resolution must be between 10 and 1000 meters"
+      if (region.centerLat < 45 || region.centerLat > 48)
+        errors += s"Region $name: latitude must be between 45 and 48 (Switzerland)"
+      if (region.centerLon < 5 || region.centerLon > 11)
+        errors += s"Region $name: longitude must be between 5 and 11 (Switzerland)"
+    }
+    
+    errors.result()
   }
 }

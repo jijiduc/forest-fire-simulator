@@ -19,6 +19,13 @@ lazy val root = (project in file("."))
       "org.http4s" %% "http4s-dsl" % "0.23.23",
       "org.http4s" %% "http4s-ember-server" % "0.23.23",
       "org.http4s" %% "http4s-ember-client" % "0.23.23",
-      "org.http4s" %% "http4s-circe" % "0.23.23"
+      "org.http4s" %% "http4s-circe" % "0.23.23",
+      // CLI and configuration
+      "com.monovore" %% "decline" % "2.4.1",
+      "com.monovore" %% "decline-effect" % "2.4.1",
+      "com.typesafe" % "config" % "1.4.3",
+      // Logging
+      "ch.qos.logback" % "logback-classic" % "1.4.11",
+      "org.typelevel" %% "log4cats-slf4j" % "2.6.0"
     )
   )

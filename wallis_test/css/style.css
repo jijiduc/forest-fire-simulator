@@ -1,0 +1,494 @@
+/* Forest Fire Simulation Viewer - Styles */
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    overflow: hidden;
+}
+
+/* App Container */
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Header */
+header {
+    background-color: #2a2a2a;
+    padding: 1rem;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #4CAF50;
+}
+
+/* File Controls */
+.file-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+#fileInput {
+    display: none;
+}
+
+.file-label {
+    background-color: #4CAF50;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.file-label:hover {
+    background-color: #45a049;
+}
+
+#fileName {
+    font-size: 0.9rem;
+    color: #999;
+}
+
+/* Main Container */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Panels */
+.left-panel, .right-panel {
+    width: 300px;
+    background-color: #2a2a2a;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.left-panel {
+    border-right: 1px solid #444;
+}
+
+.right-panel {
+    border-left: 1px solid #444;
+}
+
+/* Sections */
+section {
+    margin-bottom: 2rem;
+}
+
+section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #4CAF50;
+    font-weight: 500;
+}
+
+/* Playback Controls */
+.playback-controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.control-btn {
+    background-color: #3a3a3a;
+    color: white;
+    border: 1px solid #555;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+}
+
+.control-btn:hover:not(:disabled) {
+    background-color: #4a4a4a;
+    border-color: #4CAF50;
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.control-btn.active {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+}
+
+/* Sliders */
+.speed-control, .timeline-control {
+    margin-bottom: 1rem;
+}
+
+.speed-control label, .timeline-control label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+input[type="range"] {
+    width: 100%;
+    height: 4px;
+    background: #3a3a3a;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4CAF50;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #4CAF50;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+.timeline-info {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #999;
+}
+
+/* Metrics Display */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.metric {
+    background-color: #3a3a3a;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+.metric label {
+    display: block;
+    font-size: 0.8rem;
+    color: #999;
+    margin-bottom: 0.25rem;
+}
+
+.metric span {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #4CAF50;
+}
+
+/* Parameters Display */
+.parameters-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.parameter-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+}
+
+.parameter-item label {
+    color: #999;
+}
+
+.parameter-item span {
+    color: #e0e0e0;
+}
+
+/* View Controls */
+.view-toggles {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.view-btn {
+    flex: 1;
+    padding: 0.5rem;
+    background-color: #3a3a3a;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.view-btn.active {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+}
+
+.view-options {
+    margin-bottom: 1rem;
+}
+
+.view-options label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.view-options input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+/* Visualization Container */
+.visualization-container {
+    flex: 1;
+    position: relative;
+    background-color: #1a1a1a;
+}
+
+.canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.canvas-container.active {
+    display: block;
+}
+
+#gridCanvas {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#gridCanvas:active {
+    cursor: grabbing;
+}
+
+#threejsContainer {
+    width: 100%;
+    height: 100%;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.zoom-controls button {
+    width: 36px;
+    height: 36px;
+    background-color: rgba(58, 58, 58, 0.9);
+    color: white;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zoom-controls button:hover {
+    background-color: rgba(74, 74, 74, 0.9);
+    border-color: #4CAF50;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(26, 26, 26, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid #3a3a3a;
+    border-top-color: #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+/* Legend */
+.legend {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+    border: 1px solid #555;
+}
+
+.legend-color.empty {
+    background-color: #e0e0e0;
+}
+
+.legend-color.tree {
+    background-color: #4CAF50;
+}
+
+.legend-color.burning {
+    background: linear-gradient(135deg, #ff6b35, #ff9558);
+}
+
+.legend-color.burnt {
+    background-color: #424242;
+}
+
+/* Intensity Gradient */
+.intensity-gradient {
+    margin-top: 1rem;
+}
+
+.gradient-bar {
+    height: 20px;
+    background: linear-gradient(to right, #ffeb3b, #ff9800, #ff5722, #d32f2f);
+    border-radius: 2px;
+    margin: 0.5rem 0;
+}
+
+.gradient-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #999;
+}
+
+/* Instructions */
+.instructions-section ul {
+    list-style: none;
+}
+
+.instructions-section li {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.instructions-section kbd {
+    background-color: #3a3a3a;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid #555;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+/* Status Bar */
+.status-bar {
+    background-color: #2a2a2a;
+    border-top: 1px solid #444;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+#performanceInfo {
+    color: #999;
+}
+
+/* Utility Classes */
+.no-data {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .left-panel, .right-panel {
+        width: 250px;
+    }
+}
+
+@media (max-width: 1000px) {
+    .right-panel {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column;
+    }
+    
+    .left-panel {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #444;
+    }
+    
+    .visualization-container {
+        height: 400px;
+    }
+}
